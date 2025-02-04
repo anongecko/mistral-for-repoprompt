@@ -3,7 +3,7 @@
     "routes": [
         {
             "src": "/v1/completions",
-            "methods": ["POST"],
+            "methods": ["POST", "OPTIONS"],
             "dest": "/api/v1/completions"
         }
     ]
