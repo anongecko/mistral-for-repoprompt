@@ -1,0 +1,10 @@
+{
+    "version": 2,
+    "routes": [
+        {
+            "src": "/v1/completions",
+            "methods": ["POST"],
+            "dest": "/api/v1/completions"
+        }
+    ]
+}
