@@ -1,11 +1,7 @@
 {
     "version": 2,
-    "routes": [
-        {
-            "src": "/v1/completions",
-            "methods": ["GET", "POST", "OPTIONS"],
-            "dest": "/api/v1/completions"
-        }
+    "rewrites": [
+        { "source": "/v1/completions", "destination": "/api/v1/completions" }
     ],
     "headers": [
         {
@@ -18,3 +14,4 @@
         }
     ]
 }
+
