@@ -3,12 +3,20 @@ const axios = require('axios');
 module.exports = async (req, res) => {
     // Add OpenAI-style headers
     res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
     res.setHeader('OpenAI-Version', '2020-10-01');
-    res.setHeader('OpenAI-Organization', 'dummy-org');
 
-    // Handle preflight
+    // Handle GET requests with a proper response
+    if (req.method === 'GET') {
+        return res.status(200).json({
+            type: 'completions',
+            status: 'healthy',
+            endpoints: ['/v1/completions']
+        });
+    }
+
+    // Handle OPTIONS
     if (req.method === 'OPTIONS') {
         return res.status(200).end();
     }
@@ -25,35 +33,29 @@ module.exports = async (req, res) => {
     }
 
     try {
-        const response = await axios({
+        const mistralResponse = await axios({
             method: 'post',
             url: 'https://codestral.mistral.ai/v1/fim/completions',
-            data: {
-                ...req.body,
-                // Ensure we have these fields
-                stream: false,
-                echo: false
-            },
+            data: req.body,
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': req.headers.authorization
-            },
-            validateStatus: false
+            }
         });
 
-        // Ensure response matches OpenAI format exactly
+        // Transform to exact OpenAI format
         const formattedResponse = {
-            id: response.data.id || `chatcmpl-${Date.now()}`,
+            id: `cmpl-${Date.now()}`,
             object: 'text_completion',
             created: Math.floor(Date.now() / 1000),
-            model: req.body.model || 'mistral-medium',
-            choices: response.data.choices.map(choice => ({
-                text: choice.message.content,
-                index: choice.index,
+            model: req.body.model || 'text-davinci-003', // Use OpenAI model name
+            choices: [{
+                text: mistralResponse.data.choices[0].message.content,
+                index: 0,
                 logprobs: null,
-                finish_reason: choice.finish_reason
-            })),
-            usage: response.data.usage || {
+                finish_reason: mistralResponse.data.choices[0].finish_reason
+            }],
+            usage: mistralResponse.data.usage || {
                 prompt_tokens: 0,
                 completion_tokens: 0,
                 total_tokens: 0
@@ -66,7 +68,7 @@ module.exports = async (req, res) => {
         console.error('Error:', error);
         return res.status(500).json({
             error: {
-                message: 'Internal server error',
+                message: 'An error occurred during your request.',
                 type: 'internal_server_error',
                 param: null,
                 code: null
@@ -74,3 +76,4 @@ module.exports = async (req, res) => {
         });
     }
 };
+
