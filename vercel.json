@@ -1,8 +1,5 @@
 {
     "version": 2,
-    "rewrites": [
-        { "source": "/v1/completions", "destination": "/api/v1/completions" }
-    ],
     "headers": [
         {
             "source": "/v1/(.*)",
@@ -14,4 +11,3 @@
         }
     ]
 }
-
