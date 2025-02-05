@@ -6,6 +6,7 @@ app.use(express.json());
 app.use((req, res, next) => {
     console.log('Request path:', req.path);
     console.log('Request method:', req.method);
+    console.log('Request body:', req.body);
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
@@ -15,112 +16,95 @@ app.use((req, res, next) => {
     next();
 });
 
-// Mount all routes under /v1
-const v1Router = express.Router();
-
-v1Router.post('/', async (req, res) => {
+async function handleCompletions(req, res) {
     try {
-        const mistralResponse = await axios({
-            method: 'post',
-            url: 'https://codestral.mistral.ai/v1/fim/completions',
-            data: {
-                ...req.body,
-                model: "codestral-latest",
-                stream: false
-            },
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': req.headers.authorization
-            }
-        });
+        const isStreamRequest = req.body.stream === true;
+        console.log('Stream request:', isStreamRequest);
 
-        const formattedResponse = {
-            id: `cmpl-${Date.now()}`,
-            object: 'text_completion',
-            created: Math.floor(Date.now() / 1000),
-            model: 'text-davinci-003',
-            choices: [{
-                text: mistralResponse.data.choices[0].message.content,
-                index: 0,
-                logprobs: null,
-                finish_reason: mistralResponse.data.choices[0].finish_reason
-            }],
-            usage: mistralResponse.data.usage || {
-                prompt_tokens: 0,
-                completion_tokens: 0,
-                total_tokens: 0
-            }
-        };
+        if (isStreamRequest) {
+            res.setHeader('Content-Type', 'text/event-stream');
+            res.setHeader('Cache-Control', 'no-cache');
+            res.setHeader('Connection', 'keep-alive');
 
-        res.json(formattedResponse);
+            const mistralResponse = await axios({
+                method: 'post',
+                url: 'https://codestral.mistral.ai/v1/fim/completions',
+                data: {
+                    ...req.body,
+                    model: "codestral-latest",
+                    stream: true
+                },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': req.headers.authorization
+                },
+                responseType: 'stream'
+            });
+
+            mistralResponse.data.pipe(res);
+            mistralResponse.data.on('end', () => {
+                res.end();
+            });
+        } else {
+            const mistralResponse = await axios({
+                method: 'post',
+                url: 'https://codestral.mistral.ai/v1/fim/completions',
+                data: {
+                    ...req.body,
+                    model: "codestral-latest",
+                    stream: false
+                },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': req.headers.authorization
+                }
+            });
+
+            const formattedResponse = {
+                id: `cmpl-${Date.now()}`,
+                object: 'text_completion',
+                created: Math.floor(Date.now() / 1000),
+                model: req.body.model || 'text-davinci-003',
+                choices: [{
+                    text: mistralResponse.data.choices[0].message.content,
+                    index: 0,
+                    logprobs: null,
+                    finish_reason: mistralResponse.data.choices[0].finish_reason
+                }],
+                usage: mistralResponse.data.usage || {
+                    prompt_tokens: 0,
+                    completion_tokens: 0,
+                    total_tokens: 0
+                }
+            };
+
+            res.json(formattedResponse);
+        }
     } catch (error) {
         console.error('Detailed error:', {
             message: error.message,
             response: error.response?.data,
             status: error.response?.status
         });
-        res.status(500).json({
+        res.status(error.response?.status || 500).json({
             error: {
                 message: error.response?.data?.error?.message || 'Internal server error',
                 type: 'api_error'
             }
         });
     }
-});
+}
 
-v1Router.post('/completions', async (req, res) => {
-    // Same handler as above for compatibility
-    try {
-        const mistralResponse = await axios({
-            method: 'post',
-            url: 'https://codestral.mistral.ai/v1/fim/completions',
-            data: {
-                ...req.body,
-                model: "codestral-latest",
-                stream: false
-            },
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': req.headers.authorization
-            }
-        });
+// Handle completions at root and /v1
+app.post('/', handleCompletions);
+app.post('/v1', handleCompletions);
+app.post('/v1/completions', handleCompletions);
 
-        const formattedResponse = {
-            id: `cmpl-${Date.now()}`,
-            object: 'text_completion',
-            created: Math.floor(Date.now() / 1000),
-            model: 'text-davinci-003',
-            choices: [{
-                text: mistralResponse.data.choices[0].message.content,
-                index: 0,
-                logprobs: null,
-                finish_reason: mistralResponse.data.choices[0].finish_reason
-            }],
-            usage: mistralResponse.data.usage || {
-                prompt_tokens: 0,
-                completion_tokens: 0,
-                total_tokens: 0
-            }
-        };
-
-        res.json(formattedResponse);
-    } catch (error) {
-        console.error('Detailed error:', error);
-        res.status(500).json({
-            error: {
-                message: error.response?.data?.error?.message || 'Internal server error',
-                type: 'api_error'
-            }
-        });
-    }
-});
-
-// Mount models endpoint at root level
 app.get('/models', (req, res) => {
     res.json({
         object: "list",
         data: [{
-            id: "text-davinci-003",
+            id: "mistral-proxy-attempt995",
             object: "model",
             created: 1669599635,
             owned_by: "openai-internal"
@@ -128,13 +112,9 @@ app.get('/models', (req, res) => {
     });
 });
 
-// Mount v1 router
-app.use('/v1', v1Router);
-
 // Health check
 app.get('/', (req, res) => {
     res.json({ status: 'ok' });
 });
 
 module.exports = app;
-
