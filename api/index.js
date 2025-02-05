@@ -42,7 +42,7 @@ async function handleCompletions(req, res) {
                 id: `cmpl-${Date.now()}`,
                 object: 'text_completion',
                 created: Math.floor(Date.now() / 1000),
-                model: req.body.model || 'text-davinci-003',
+                model: req.body.model || 'codestral-latest',
                 choices: [{
                     text: mistralResponse.data.choices[0].message.content,
                     index: 0,
@@ -132,7 +132,7 @@ app.get('/v1/models', (req, res) => {
     res.json({
         object: "list",
         data: [{
-            id: "text-davinci-003",
+            id: "codestral-latest",
             object: "model",
             created: 1669599635,
             owned_by: "openai-internal"
