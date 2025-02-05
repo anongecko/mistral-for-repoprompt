@@ -1,3 +1,4 @@
+// File: api/index.js
 const express = require('express');
 const axios = require('axios');
 const app = express();
@@ -77,7 +78,6 @@ async function handleChatCompletions(req, res) {
                 ...req.body,
                 model: "codestral-latest",
                 stream: req.body.stream || false,
-                // Convert messages to prompt if they exist
                 ...(req.body.messages ? {
                     prompt: req.body.messages.map(msg => 
                         `${msg.role}: ${msg.content}`).join('\n')
@@ -128,8 +128,8 @@ async function handleChatCompletions(req, res) {
     }
 }
 
-// Models endpoint
-app.get('/models', (req, res) => {
+// Models endpoints - both at root and v1 for compatibility
+app.get('/v1/models', (req, res) => {
     res.json({
         object: "list",
         data: [{
