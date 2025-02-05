@@ -1,3 +1,4 @@
+// File: index.js (in root, not in api folder)
 const express = require('express');
 const axios = require('axios');
 const app = express();
@@ -152,6 +153,11 @@ app.post('/v1/chat/completions', handleChatCompletions);
 // Health check
 app.get('/', (req, res) => {
     res.json({ status: 'ok' });
+});
+
+const port = process.env.PORT || 3000;
+app.listen(port, () => {
+    console.log(`Server running on port ${port}`);
 });
 
 module.exports = app;
