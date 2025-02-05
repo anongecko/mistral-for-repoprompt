@@ -18,7 +18,7 @@ app.get('/models', (req, res) => {
     res.json({
         object: "list",
         data: [{
-            id: "text-davinci-003",
+            id: "codestral-proxy",
             object: "model",
             created: 1669599635,
             owned_by: "openai-internal"
