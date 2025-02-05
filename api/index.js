@@ -99,7 +99,7 @@ async function handleChatCompletions(req, res) {
                 id: `chatcmpl-${Date.now()}`,
                 object: 'chat.completion',
                 created: Math.floor(Date.now() / 1000),
-                model: req.body.model || 'text-davinci-003',
+                model: req.body.model || 'codestral-latest',
                 choices: [{
                     index: 0,
                     message: {
