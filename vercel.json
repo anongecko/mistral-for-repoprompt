@@ -8,13 +8,11 @@
     ],
     "routes": [
         {
-            "src": "/models",
-            "methods": ["GET"],
+            "src": "/v1/(.*)",
             "dest": "/api/index.js"
         },
         {
-            "src": "/completions",
-            "methods": ["POST", "OPTIONS"],
+            "src": "/models",
             "dest": "/api/index.js"
         },
         {
