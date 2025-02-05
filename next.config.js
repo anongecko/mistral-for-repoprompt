@@ -1,4 +1,5 @@
 module.exports = {
+  output: 'standalone',  // Add this line
   rewrites: async () => {
     return [
       {
