@@ -13,7 +13,7 @@
             "dest": "/api/index.js"
         },
         {
-            "src": "/v1/completions",
+            "src": "/completions",
             "methods": ["POST", "OPTIONS"],
             "dest": "/api/index.js"
         },

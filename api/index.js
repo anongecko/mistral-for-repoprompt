@@ -13,10 +13,7 @@ app.use((req, res, next) => {
     next();
 });
 
-app.get('/', (req, res) => {
-    res.json({ status: 'ok' });
-});
-
+// Move models endpoint to base URL
 app.get('/models', (req, res) => {
     res.json({
         object: "list",
@@ -29,17 +26,15 @@ app.get('/models', (req, res) => {
     });
 });
 
-app.post('/v1/completions', async (req, res) => {
+// Completions endpoint now directly under /v1/
+app.post('/completions', async (req, res) => {
     try {
-        console.log('Request body:', req.body);
-        console.log('Request headers:', req.headers);
-
         const mistralResponse = await axios({
             method: 'post',
             url: 'https://codestral.mistral.ai/v1/fim/completions',
             data: {
                 ...req.body,
-                model: "codestral-latest"  // Force Mistral model
+                model: "codestral-latest"
             },
             headers: {
                 'Content-Type': 'application/json',
@@ -47,18 +42,16 @@ app.post('/v1/completions', async (req, res) => {
             }
         });
 
-        console.log('Mistral response:', mistralResponse.data);
-
         const formattedResponse = {
             id: `cmpl-${Date.now()}`,
             object: 'text_completion',
             created: Math.floor(Date.now() / 1000),
-            model: req.body.model || 'text-davinci-003',
+            model: 'text-davinci-003',
             choices: [{
                 text: mistralResponse.data.choices[0].message.content,
                 index: 0,
                 logprobs: null,
-                finish_reason: "stop"
+                finish_reason: mistralResponse.data.choices[0].finish_reason
             }],
             usage: mistralResponse.data.usage || {
                 prompt_tokens: 0,
@@ -67,25 +60,22 @@ app.post('/v1/completions', async (req, res) => {
             }
         };
 
-        console.log('Formatted response:', formattedResponse);
         res.json(formattedResponse);
-
     } catch (error) {
-        console.error('Detailed error:', {
-            message: error.message,
-            response: error.response?.data,
-            status: error.response?.status,
-            headers: error.response?.headers
-        });
-
-        res.status(error.response?.status || 500).json({
+        console.error('Error:', error.response?.data || error.message);
+        res.status(500).json({
             error: {
-                message: error.response?.data?.error?.message || error.message,
-                type: 'api_error',
-                code: error.response?.status
+                message: error.response?.data?.error?.message || 'Internal server error',
+                type: 'api_error'
             }
         });
     }
 });
 
+// Health check
+app.get('/', (req, res) => {
+    res.json({ status: 'ok' });
+});
+
 module.exports = app;
+
