@@ -6,13 +6,10 @@
             "use": "@vercel/node"
         }
     ],
-    "rewrites": [
-        { "source": "/v1/models", "destination": "/api/index.js" },
-        { "source": "/v1/completions", "destination": "/api/index.js" },
-        { "source": "/v1/chat/completions", "destination": "/api/index.js" },
-        { "source": "/v1", "destination": "/api/index.js" },
-        { "source": "/chat/completions", "destination": "/api/index.js" },
-        { "source": "/chat", "destination": "/api/index.js" },
-        { "source": "/(.*)", "destination": "/api/index.js" }
+    "routes": [
+        {
+            "src": "/(.*)",
+            "dest": "/api/index.js"
+        }
     ]
 }

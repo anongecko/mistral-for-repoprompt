@@ -1,4 +1,3 @@
-// File: index.js (in root, not in api folder)
 const express = require('express');
 const axios = require('axios');
 const app = express();
@@ -128,7 +127,7 @@ async function handleChatCompletions(req, res) {
     }
 }
 
-// Models endpoint at v1/models
+// Models endpoint
 app.get('/v1/models', (req, res) => {
     res.json({
         object: "list",
@@ -153,11 +152,6 @@ app.post('/v1/chat/completions', handleChatCompletions);
 // Health check
 app.get('/', (req, res) => {
     res.json({ status: 'ok' });
-});
-
-const port = process.env.PORT || 3000;
-app.listen(port, () => {
-    console.log(`Server running on port ${port}`);
 });
 
 module.exports = app;
