@@ -1,17 +1,23 @@
 {
-    "version": 2,
-    "rewrites": [
-        { "source": "/models", "destination": "/api/models" },
-        { "source": "/v1/completions", "destination": "/api/v1/completions" }
-    ],
-    "headers": [
-        {
-            "source": "/(.*)",
-            "headers": [
-                { "key": "Access-Control-Allow-Origin", "value": "*" },
-                { "key": "Access-Control-Allow-Methods", "value": "GET, POST, OPTIONS" },
-                { "key": "Access-Control-Allow-Headers", "value": "Content-Type, Authorization" }
-            ]
-        }
-    ]
+  "version": 2,
+  "builds": [
+    {
+      "src": "api/index.js",
+      "use": "@vercel/node"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/models",
+      "dest": "/api/index.js"
+    },
+    {
+      "src": "/v1/completions",
+      "dest": "/api/index.js"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/api/index.js"
+    }
+  ]
 }
