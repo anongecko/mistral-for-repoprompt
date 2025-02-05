@@ -68,6 +68,66 @@ async function handleCompletions(req, res) {
     }
 }
 
+async function handleChatCompletions(req, res) {
+    try {
+        const mistralResponse = await axios({
+            method: 'post',
+            url: 'https://codestral.mistral.ai/v1/fim/completions',
+            data: {
+                ...req.body,
+                model: "codestral-latest",
+                stream: req.body.stream || false,
+                // Convert messages to prompt if they exist
+                ...(req.body.messages ? {
+                    prompt: req.body.messages.map(msg => 
+                        `${msg.role}: ${msg.content}`).join('\n')
+                } : {})
+            },
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': req.headers.authorization
+            },
+            ...(req.body.stream ? { responseType: 'stream' } : {})
+        });
+
+        if (req.body.stream) {
+            res.setHeader('Content-Type', 'text/event-stream');
+            res.setHeader('Cache-Control', 'no-cache');
+            res.setHeader('Connection', 'keep-alive');
+            mistralResponse.data.pipe(res);
+        } else {
+            const formattedResponse = {
+                id: `chatcmpl-${Date.now()}`,
+                object: 'chat.completion',
+                created: Math.floor(Date.now() / 1000),
+                model: req.body.model || 'text-davinci-003',
+                choices: [{
+                    index: 0,
+                    message: {
+                        role: 'assistant',
+                        content: mistralResponse.data.choices[0].message.content
+                    },
+                    finish_reason: mistralResponse.data.choices[0].finish_reason
+                }],
+                usage: mistralResponse.data.usage || {
+                    prompt_tokens: 0,
+                    completion_tokens: 0,
+                    total_tokens: 0
+                }
+            };
+            res.json(formattedResponse);
+        }
+    } catch (error) {
+        console.error('Error:', error.message);
+        res.status(500).json({
+            error: {
+                message: error.response?.data?.error?.message || 'Internal server error',
+                type: 'api_error'
+            }
+        });
+    }
+}
+
 // Models endpoint
 app.get('/models', (req, res) => {
     res.json({
@@ -81,9 +141,14 @@ app.get('/models', (req, res) => {
     });
 });
 
-// Handle completions at both /v1 and /v1/completions
+// Regular completions endpoints
 app.post('/v1', handleCompletions);
 app.post('/v1/completions', handleCompletions);
+
+// Chat completions endpoints
+app.post('/chat/completions', handleChatCompletions);
+app.post('/chat', handleChatCompletions);
+app.post('/v1/chat/completions', handleChatCompletions);
 
 // Health check
 app.get('/', (req, res) => {
