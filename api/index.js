@@ -1,4 +1,3 @@
-// File: api/index.js
 const express = require('express');
 const axios = require('axios');
 const app = express();
@@ -128,7 +127,7 @@ async function handleChatCompletions(req, res) {
     }
 }
 
-// Models endpoints - both at root and v1 for compatibility
+// Models endpoint at v1/models
 app.get('/v1/models', (req, res) => {
     res.json({
         object: "list",
