@@ -1,8 +1,12 @@
 {
     "version": 2,
+    "rewrites": [
+        { "source": "/models", "destination": "/api/models" },
+        { "source": "/v1/completions", "destination": "/api/v1/completions" }
+    ],
     "headers": [
         {
-            "source": "/api/v1/(.*)",
+            "source": "/(.*)",
             "headers": [
                 { "key": "Access-Control-Allow-Origin", "value": "*" },
                 { "key": "Access-Control-Allow-Methods", "value": "GET, POST, OPTIONS" },
