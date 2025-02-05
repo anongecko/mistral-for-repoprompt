@@ -95,16 +95,12 @@ async function handleCompletions(req, res) {
     }
 }
 
-// Handle completions at root and /v1
-app.post('/', handleCompletions);
-app.post('/v1', handleCompletions);
-app.post('/v1/completions', handleCompletions);
-
+// Models endpoint at root level
 app.get('/models', (req, res) => {
     res.json({
         object: "list",
         data: [{
-            id: "mistral-proxy-attempt995",
+            id: "text-davinci-003",
             object: "model",
             created: 1669599635,
             owned_by: "openai-internal"
@@ -112,7 +108,10 @@ app.get('/models', (req, res) => {
     });
 });
 
-// Health check
+// Handle completions with and without trailing slashes
+app.post('/v1/', handleCompletions);  // With trailing slash
+app.post('/v1', handleCompletions);   // Without trailing slash
+
 app.get('/', (req, res) => {
     res.json({ status: 'ok' });
 });
