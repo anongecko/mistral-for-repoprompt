@@ -2,14 +2,8 @@ const express = require('express');
 const axios = require('axios');
 const app = express();
 
-// Middleware
 app.use(express.json());
 app.use((req, res, next) => {
-    console.log('Incoming request:', {
-        path: req.path,
-        method: req.method,
-        headers: req.headers
-    });
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
@@ -19,14 +13,11 @@ app.use((req, res, next) => {
     next();
 });
 
-// Root endpoint
 app.get('/', (req, res) => {
     res.json({ status: 'ok' });
 });
 
-// Models endpoint
 app.get('/models', (req, res) => {
-    console.log('Models endpoint hit');
     res.json({
         object: "list",
         data: [{
@@ -38,43 +29,63 @@ app.get('/models', (req, res) => {
     });
 });
 
-// Completions endpoint
 app.post('/v1/completions', async (req, res) => {
-    console.log('Completions endpoint hit');
     try {
+        console.log('Request body:', req.body);
+        console.log('Request headers:', req.headers);
+
         const mistralResponse = await axios({
             method: 'post',
             url: 'https://codestral.mistral.ai/v1/fim/completions',
-            data: req.body,
+            data: {
+                ...req.body,
+                model: "codestral-latest"  // Force Mistral model
+            },
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': req.headers.authorization
             }
         });
 
-        res.json({
+        console.log('Mistral response:', mistralResponse.data);
+
+        const formattedResponse = {
             id: `cmpl-${Date.now()}`,
             object: 'text_completion',
             created: Math.floor(Date.now() / 1000),
-            model: 'text-davinci-003',
+            model: req.body.model || 'text-davinci-003',
             choices: [{
                 text: mistralResponse.data.choices[0].message.content,
                 index: 0,
                 logprobs: null,
-                finish_reason: mistralResponse.data.choices[0].finish_reason
+                finish_reason: "stop"
             }],
-            usage: mistralResponse.data.usage
-        });
-    } catch (error) {
-        console.error('Completions error:', error);
-        res.status(500).json({ error: 'Internal server error' });
-    }
-});
+            usage: mistralResponse.data.usage || {
+                prompt_tokens: 0,
+                completion_tokens: 0,
+                total_tokens: 0
+            }
+        };
 
-// Catch-all for debugging
-app.use((req, res) => {
-    console.log('404 for path:', req.path);
-    res.status(404).json({ error: `No handler for ${req.method} ${req.path}` });
+        console.log('Formatted response:', formattedResponse);
+        res.json(formattedResponse);
+
+    } catch (error) {
+        console.error('Detailed error:', {
+            message: error.message,
+            response: error.response?.data,
+            status: error.response?.status,
+            headers: error.response?.headers
+        });
+
+        res.status(error.response?.status || 500).json({
+            error: {
+                message: error.response?.data?.error?.message || error.message,
+                type: 'api_error',
+                code: error.response?.status
+            }
+        });
+    }
 });
 
 module.exports = app;
