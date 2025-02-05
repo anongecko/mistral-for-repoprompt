@@ -6,7 +6,6 @@ app.use(express.json());
 app.use((req, res, next) => {
     console.log('Request path:', req.path);
     console.log('Request method:', req.method);
-    console.log('Request body:', req.body);
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
@@ -18,48 +17,27 @@ app.use((req, res, next) => {
 
 async function handleCompletions(req, res) {
     try {
-        const isStreamRequest = req.body.stream === true;
-        console.log('Stream request:', isStreamRequest);
+        const mistralResponse = await axios({
+            method: 'post',
+            url: 'https://codestral.mistral.ai/v1/fim/completions',
+            data: {
+                ...req.body,
+                model: "codestral-latest",
+                stream: req.body.stream || false
+            },
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': req.headers.authorization
+            },
+            ...(req.body.stream ? { responseType: 'stream' } : {})
+        });
 
-        if (isStreamRequest) {
+        if (req.body.stream) {
             res.setHeader('Content-Type', 'text/event-stream');
             res.setHeader('Cache-Control', 'no-cache');
             res.setHeader('Connection', 'keep-alive');
-
-            const mistralResponse = await axios({
-                method: 'post',
-                url: 'https://codestral.mistral.ai/v1/fim/completions',
-                data: {
-                    ...req.body,
-                    model: "codestral-latest",
-                    stream: true
-                },
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': req.headers.authorization
-                },
-                responseType: 'stream'
-            });
-
             mistralResponse.data.pipe(res);
-            mistralResponse.data.on('end', () => {
-                res.end();
-            });
         } else {
-            const mistralResponse = await axios({
-                method: 'post',
-                url: 'https://codestral.mistral.ai/v1/fim/completions',
-                data: {
-                    ...req.body,
-                    model: "codestral-latest",
-                    stream: false
-                },
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': req.headers.authorization
-                }
-            });
-
             const formattedResponse = {
                 id: `cmpl-${Date.now()}`,
                 object: 'text_completion',
@@ -77,16 +55,11 @@ async function handleCompletions(req, res) {
                     total_tokens: 0
                 }
             };
-
             res.json(formattedResponse);
         }
     } catch (error) {
-        console.error('Detailed error:', {
-            message: error.message,
-            response: error.response?.data,
-            status: error.response?.status
-        });
-        res.status(error.response?.status || 500).json({
+        console.error('Error:', error.message);
+        res.status(500).json({
             error: {
                 message: error.response?.data?.error?.message || 'Internal server error',
                 type: 'api_error'
@@ -95,7 +68,7 @@ async function handleCompletions(req, res) {
     }
 }
 
-// Models endpoint at root level
+// Models endpoint
 app.get('/models', (req, res) => {
     res.json({
         object: "list",
@@ -108,10 +81,11 @@ app.get('/models', (req, res) => {
     });
 });
 
-// Handle completions with and without trailing slashes
-app.post('/v1/', handleCompletions);  // With trailing slash
-app.post('/v1', handleCompletions);   // Without trailing slash
+// Handle completions at both /v1 and /v1/completions
+app.post('/v1', handleCompletions);
+app.post('/v1/completions', handleCompletions);
 
+// Health check
 app.get('/', (req, res) => {
     res.json({ status: 'ok' });
 });
